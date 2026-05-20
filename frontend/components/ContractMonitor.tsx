@@ -33,16 +33,18 @@ export function ContractMonitor({ contractAddress, playerAddress }: Props) {
       </div>
       
       <div className="flex flex-col gap-1">
-        {error ? (
-          <p className="text-xs text-red-500 font-mono">Error: {error}</p>
-        ) : (
-          <>
-            <div className="text-3xl font-bold">{points} Points</div>
-            <p className="text-xs text-muted-foreground">
-              Live data from Intelligent Contract
-            </p>
-          </>
-        )}
+      {error ? (
+  <p className="text-xs text-red-500 font-mono">Error: {error}</p>
+) : loading ? (
+  <div className="text-3xl font-bold text-muted-foreground">— Points</div>
+) : (
+  <>
+    <div className="text-3xl font-bold">{points} Points</div>
+    <p className="text-xs text-muted-foreground">
+      Live data from Intelligent Contract
+    </p>
+  </>
+)}
       </div>
 
       <div className="mt-4 pt-4 border-t border-border/50">
