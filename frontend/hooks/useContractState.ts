@@ -15,52 +15,37 @@
  */
 
 'use client';
-import { useState, useEffect } from 'react';
 
-// This hook fetches the current points for a specific player
+import { useQuery } from '@tanstack/react-query';
+
 export function useContractState(contractAddress: string, playerAddress: string) {
-  const [data, setData] = useState({ 
-    points: 0, 
-    loading: true, 
-    error: null as string | null 
+  const query = useQuery({
+    queryKey: ['contract-points', contractAddress, playerAddress],
+    enabled: Boolean(contractAddress && playerAddress),
+    refetchInterval: 5000, // Safely handles the 5-second polling loop automatically
+    queryFn: async ({ signal }) => {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_GENLAYER_RPC_URL}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'gen_call',
+          params: [contractAddress, 'get_points', [playerAddress]],
+          id: 1,
+        }),
+        signal, // Automatically aborts stale network tasks
+      });
+
+      const result = await response.json();
+      if (result.error) throw new Error(result.error.message);
+      return result.result || 0;
+    },
   });
 
-  useEffect(() => {
-    if (!contractAddress || !playerAddress) return;
-
-    const fetchState = async () => {
-      try {
-        // Note: In a real PR, ensure the 'client' import matches 
-        // the boilerplate's existing RPC configuration
-        const response = await fetch(`${process.env.NEXT_PUBLIC_GENLAYER_RPC_URL}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'gen_call',
-            params: [contractAddress, 'get_points', [playerAddress]],
-            id: 1,
-          }),
-        });
-
-        const result = await response.json();
-        
-        if (result.error) throw new Error(result.error.message);
-        
-        setData({ 
-          points: result.result || 0, 
-          loading: false, 
-          error: null 
-        });
-      } catch (err: any) {
-        setData(prev => ({ ...prev, loading: false, error: err.message }));
-      }
-    };
-
-    fetchState();
-    const interval = setInterval(fetchState, 5000); 
-    return () => clearInterval(interval);
-  }, [contractAddress, playerAddress]);
-
-  return data;
+  return {
+    points: query.data ?? 0,
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+  };
+}
 }
